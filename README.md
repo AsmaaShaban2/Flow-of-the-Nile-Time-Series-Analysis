@@ -9,7 +9,7 @@ This repository contains a comprehensive time series analysis of the annual flow
 - `Nile.csv`: Annual Nile River flow data.
 - `MACT4232_Project.pdf`: Full report with code and outputs.
 - `README.Rmd`: This documentation file.
-- `project.R`: R code 
+- `code`: R code 
 
 ---
 
