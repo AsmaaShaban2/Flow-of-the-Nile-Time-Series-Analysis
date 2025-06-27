@@ -1,0 +1,280 @@
+---
+title: "Flow of The Nile"
+output: html_document
+date: "2025-04-21"
+---
+
+
+The dataset Nile contains measurements of the annual flow of the Nile River at Aswan (formerly Assuan), Egypt, spanning the years 1871 to 1970 — a total of 100 consecutive observations.
+
+- Units: $10^8$ cubic meters (CMS) per year
+
+- Time Span: 1871–1970
+
+- Length: 100 observations (annually recorded)
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+my_data<-read.csv("Nile.csv")
+
+my_data
+```
+
+```{r}
+plot.ts(my_data$Nile, main = "Nile River Flow", ylab = "Flow", xlab = "Time")
+```
+
+The original time series of Nile River flow shows **a slight downward trend**, we apply **first differencing** to remove this trend.
+
+
+```{r}
+nile_diff <- diff(my_data$Nile, 1)
+plot.ts(nile_diff)
+
+```
+The differenced series fluctuates around a constant mean with approximately stable variance, indicating that the time series is now stationary.
+
+### Checking ACF and PACF
+
+```{r}
+dif1_acf<-acf(nile_diff)
+dif1_pacf<-pacf(nile_diff)
+
+```
+
+```{r}
+model=arima(nile_diff,order=c(1,1,1))
+model
+```
+-------Comments in Baslmala's file (about other fitting and AIC)-------------
+
+
+
+### Augmented Dickey-Fuller Test Unit Root / Cointegration Test
+
+```{r}
+ if (!require(urca)) install.packages("urca")
+ if(!require(tseries)) install.packages("tseries")
+library(tseries)
+library(urca)
+
+```
+
+We apply the Augmented Dickey-Fuller test to check whether the Nile River flow series is stationary.
+
+- Null Hypothesis: The series has a unit root (i.e., it is non-stationary).
+
+- Alternative Hypothesis: The series is stationary.
+
+```{r}
+
+adf1 <- adf.test(Nile_Flow,k=1)
+adf1
+
+
+```
+For orginal series and with difference=1, p-value is less than 0.05 ($\alpha). We reject the null hypothesis. Thus, we reject that series is not stationary. 
+
+
+
+
+```{r}
+df=ur.df(Nile_Flow,type="trend",lags=1)
+df
+summary(df)
+```
+Using the ur.df() test with type = "trend" and lag = 1, we found:
+
+The ADF test statistic (–4.79) is below the 1% critical value (–4.04), so we reject the null hypothesis of a unit root.
+
+The trend term is (p=0.0185) supports rejecting the null of both trend absence and unit root.
+
+herefore, the Nile River flow series is stationary 
+
+
+
+```{r}
+Niled1<-diff(Nile_Flow,1)
+df11=ur.df(Niled1,type="none",lags=1)
+df11
+```
+
+
+
+
+### Checking model Assumptions (NICE Assumptions)
+
+```{r}
+qqnorm(model$residuals)
+qqline(model$residuals)
+plot.ts(model$residuals)
+acf(model$residuals)
+Box.test(model$residuals,lag=20,fitdf = 1)
+
+```
+
+- Q-Q Plot: Residuals are approximately normally distributed, aligning closely with the diagonal reference line.
+
+- Residual Time Series Plot: No obvious structure or trend remains. Residuals are randomly distributed around zero.
+
+- ACF of Residuals: No significant autocorrelation is present; all autocorrelations fall within the 95% confidence bounds.
+
+- Box-Pierce Test:
+Null Hypothesis: Residuals are white noise (i.e., uncorrelated).
+
+Alternative Hypothesis: Residuals are not white noise (i.e., there is autocorrelation).
+
+Since p-value is 0.2995, we fail to reject the null hypothesis. This suggests that the residuals are not significantly autocorrelated. 
+
+Therefore, ARIMA(1,1,1) is an appropriate model for the differenced Nile River flow data.
+
+
+### ARIMA(1,1,1) equation
+The ARIMA(1,1,1) model can be expressed as:
+$$
+(1 - \phi_1 B)(1 - B)Y_t = (1 + \theta_1 B)\varepsilon_t
+$$
+
+Where:
+$𝑌_t$: observed time series (Nile River flow)
+$B$: backshift operator, i.e., 
+$\phi_1$: autoregressive (AR) parameter
+$\theta_1$: moving average (MA) parameter
+$\epsilon_t$: white noise error term
+
+$$
+\Delta Y_t = -0.3924 \cdot \Delta Y_{t-1} + \varepsilon_t - 1.0000 \cdot \varepsilon_{t-1}
+$$
+
+
+
+
+
+Examine overfitting (this for bonus) Forcasting Dickey-Fuller (DF) test Augmented Dickey-Fuller (ADF) test LSTM & Spectral
+
+## Spectral Analysis 
+The goal of using Spectral Analysis is to view the time series from a frequency perspective. This involves decomposing the time series into a linear combination of sine and cosine functions at different frequencies.
+
+```{r}
+if (!require(readr)) install.packages("readr")
+if (!require(forecast)) install.packages("forecast", dependencies = TRUE); 
+library(readr)
+library(forecast)
+
+```
+
+### Load and visualize the Nile River dataset
+
+```{r}
+my_data<-read.csv("Nile.csv")
+
+Nile_Flow <- ts(my_data$Nile,frequency=1,start=c(1871))
+plot.ts(Nile_Flow)
+```
+
+### Log-transform and detrend the series manually
+
+Firstlt, the series should be detrended before a spectral analysis. Since the data was recorded annually, we did not proceed with decompose() function as no seasonality. The frequency in this case is 1. Therefore, we are going to proceed with Log-transform and detrend the serious manually.
+
+```{r}
+log_Nile <- log10(Nile_Flow)
+t <- time(log_Nile)
+trend_model <- lm(log_Nile ~ poly(t, 2))  # Polynomial trend (degree 2)
+residuals_ts <- ts((trend_model$residuals), start = 1871)
+
+# Plot residuals
+plot(residuals_ts, main = "Residuals After Polynomial Detrending", ylab = "Residuals")
+
+
+
+```
+
+This plot shows the Nile River flow after removing long-term trends via a quadratic regression on the log-transformed data. The residuals fluctuate around zero, indicating that the trend has been successfully removed.
+
+The periodogram is calculated using the Discrete Fourier Transform (DFT).
+
+Periodogram shows the contribution of different frequencies to the variance of the time series.
+
+-   The **x-axis** represents frequency, typically in cycles per time unit.
+
+-   Since our data is annual (frequency=1), the unit is cycles per year.
+
+-   A peak in the periodogram indicates a frequency at which the time series has a strong periodic component.
+
+### Raw Periodogram: Frequency Decomposition
+
+```{r}
+spec.pgram(residuals_ts, detrend = FALSE, log = "no", main = "Raw Periodogram of Detrended Nile Flow")
+```
+
+The periodogram displays the strength of different frequencies present in the detrended series. Peaks in the
+
+spectrum suggest dominant periodic components. Notably, the peak around frequency 0.15 implies a possible 15-year cycle, as Period=\$\$\frac{1}{\text{Frequency}}\$\$. This supports the presence of medium-term oscillations in river flow, beyond the removed trend.
+
+### Smoothed Periodograms for Stability
+
+We applied different smoothing spans to the periodogram to assess spectral stability. Lower spans (e.g., 3) preserve fine detail but are more sensitive to noise, while higher spans (e.g., 7,7) yield smoother, more stable spectra that highlight dominant periodicities clearly.
+
+```{r}
+spec.pgram(residuals_ts, spans = c(3), detrend = FALSE, main = "1-Smoothed Periodogram (span=3)")
+spec.pgram(residuals_ts, spans = c(3, 3), detrend = FALSE, main = "2- Smoothed Periodogram (spans=3,3)")
+spec.pgram(residuals_ts, spans = c(7, 7), detrend = FALSE, main = "3- Smoothed Periodogram (spans=7,7)")
+```
+
+(1) Smoothed Periodogram (span = 3) This smoothed periodogram retains much of the detail in the raw spectrum while reducing noise. The dominant peak around frequency 0.15 still stands out, corresponding to a cycle of approximately 6.67 years.
+
+(3)Smoothed Periodogram (spans = 7,7) With greater smoothing, the periodogram becomes more stable. The dominant peak around frequency 0.15. However; peaks are less than the one with span=3 which shows primary periodic components.
+
+The dominant frequency used in harmonic regression was extracted from a **moderately smoothed periodogram** (`spans = c(3,3)`) to ensure robustness while preserving spectral resolution.
+
+```{r}
+spec <- spec.pgram(residuals_ts, spans = c(3,3), plot = FALSE)
+dominant_freq <- spec$freq[which.max(spec$spec)]
+dominant_period <- 1 / dominant_freq
+cat("Dominant period (years):", round(dominant_period, 2), "\n")
+
+```
+
+This suggests that the Nile River flow exhibits a long-term oscillation approximately every 14 years after removing the long-term trend.
+
+```{r}
+par(mfrow = c(1, 1))
+```
+
+### Harmonic Regression: Fit the Dominant Cycle
+
+```{r}
+# Use the previously found dominant frequency
+f <- dominant_freq  
+
+# Time vector
+t_vals <- time(residuals_ts)
+
+# Create sine and cosine components
+harmonic_data <- data.frame(
+  y = as.numeric(residuals_ts),
+  sin_term = sin(2 * pi * f * t_vals),
+  cos_term = cos(2 * pi * f * t_vals)
+)
+
+# Fit harmonic regression
+harmonic_model <- lm(y ~ sin_term + cos_term, data = harmonic_data)
+
+# Summary of model
+summary(harmonic_model)
+
+```
+
+Although harmonic regression revealed a significant \~14-year cycle, the model explained less than 8% of the residual variance and lacks predictive strength on its own. Therefore, we do not proceed with standalone forecasting using this model. Instead, an ARIMA model or LSTM is recommended for time series forecasting.
+
+
+
+Sources: 
+Dataset: https://www.kaggle.com/datasets/lsind18/flow-of-the-river-nile
+
+Spectral Analysis:https://vlyubchich.github.io/tsar/l13_spectral.html
+
+ChatGPT: Asked about performing harmonic regression and its code
+
