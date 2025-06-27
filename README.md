@@ -1,12 +1,4 @@
 # Flow-of-the-Nile-Time-Series-Analysis
----
-title: "Flow of the Nile: Time Series Analysis"
-author: "MACT4232 Group Project"
-date: "`r Sys.Date()`"
-output: github_document
----
-
-# 📊 Flow of the Nile River (1871–1970)
 
 This repository contains a comprehensive time series analysis of the annual flow of the Nile River at Aswan, Egypt. The dataset spans 100 years (1871–1970), and we analyze its statistical properties, apply ARIMA modeling, and conduct spectral analysis for periodicity detection. We also explore deep learning-based forecasting using LSTM for comparison.
 
@@ -17,7 +9,7 @@ This repository contains a comprehensive time series analysis of the annual flow
 - `Nile.csv`: Annual Nile River flow data.
 - `MACT4232_Project.pdf`: Full report with code and outputs.
 - `README.Rmd`: This documentation file.
-- `notebook_lstm.ipynb`: LSTM forecasting notebook (optional Colab link below).
+- `project.R`: R code 
 
 ---
 
